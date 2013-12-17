@@ -31,4 +31,12 @@ void hSpliterTests::testLocal()
 					hSpliterClient::START,
 					20);
 	
+	KeyRange range = spliter.getSplit();
+	while (range.ok())
+	{
+		std::cout << range.toString() << std::endl;
+		range = spliter.getSplit();
+	}
+	
+	
 }

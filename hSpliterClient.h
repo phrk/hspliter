@@ -22,8 +22,8 @@ public:
 	
 	virtual ~hSpliterClient()  { }
 	virtual KeyRange getSplit() = 0;
-	virtual bool tryOwnKey(std::string key) = 0;
-	virtual void setKeyHandled(std::string key) = 0;
+	virtual bool tryKeyCommit(std::string key) = 0;
+	virtual void setKeyCommited(std::string key) = 0;
 };
 
 #endif	/* HSPLITERCLIENT_H */

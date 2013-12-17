@@ -27,24 +27,25 @@ class hSpliterLocal : public hSpliterClient
 	
 	htQuerierPtr m_querier; 
 	htKeyScannerPtr m_input_scanner;
-	htCustomScannerPtr m_states_scanner;
+	htCollScannerPtr m_states_scanner;
 	htCollWriterConcPtr m_writer;
-	
+	/*
 	class KeyState
 	{
 		public:
-		bool owned;
-		bool handled;
+		//bool owned;		// only in-mem
+		bool handled;	// in db
 		
 		KeyState(bool _owned, bool _handled);
 		KeyState(std::string _owned, std::string _handled);
-	};
+	};*/
 	
-	std::tr1::unordered_map<std::string, KeyState> m_key_states;
+	std::tr1::unordered_map<std::string, bool> m_keys_handled;
 	std::queue<KeyRange> m_free_ranges;
-	std::queue<KeyRange> m_owned_ranges;
 	
-	bool isOwned(std::string key);
+	//std::queue<KeyRange> m_nothandled_ranges;
+	
+	//bool isOwned(std::string key);
 	bool isHandled(std::string key);
 	
 	void loadStates();
@@ -61,14 +62,14 @@ public:
 	
 	virtual ~hSpliterLocal();
 	virtual KeyRange getSplit();
-	virtual bool tryOwnKey(std::string key);
-	virtual void setKeyHandled(std::string key);
+	virtual bool tryKeyCommit(std::string key);
+	virtual void setKeyCommited(std::string key);
 };
 
 /*
  * 
  * ns::job
- *	id	|	owned	|	handled	
+ *	id	|	handled	
  * 
  */
 

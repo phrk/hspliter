@@ -2,27 +2,27 @@
 
 #include "hSpliterLocal.h"
 
-
+/*
 hSpliterLocal::KeyState::KeyState(bool _owned, bool _handled):
-			owned(_owned),
+//			owned(_owned),
 			handled(_handled)
 {
 }
 
 hSpliterLocal::KeyState::KeyState(std::string _owned, std::string _handled)
 {
-	owned = 0;
+//	owned = 0;
 	handled = 0;
 	if (_owned=="1")
 	{
-		owned = 1;
+//		owned = 1;
 	}
 	else if (_owned=="0")
 	{
 	}
 	else
 	{
-		throw "KeyState::KeyState _owned undefined value: " + _owned;
+//		throw "KeyState::KeyState _owned undefined value: " + _owned;
 	}
 	
 	if (_handled=="1")
@@ -35,10 +35,25 @@ hSpliterLocal::KeyState::KeyState(std::string _owned, std::string _handled)
 	}
 	else
 	{
-		throw "KeyState::KeyState handled undefined value: " + _owned;
+//		throw "KeyState::KeyState handled undefined value: " + _handled;
+	}
+}*/	
+
+bool stringToBool(const std::string &_handled)
+{
+	if (_handled=="1")
+	{
+		return true;
+	}
+	else if (_handled=="0")
+	{
+		return false;
+	}
+	else
+	{
+		throw "stringToBool undefined value: " + _handled;
 	}
 }
-		
 		
 hSpliterLocal::hSpliterLocal(ThriftClientPtr _client,
 				std::string _ns,
@@ -57,7 +72,7 @@ hSpliterLocal::hSpliterLocal(ThriftClientPtr _client,
 		Hypertable::ThriftGen::HqlResult result;
 		_client->hql_query(result, m_ns, "drop table if exists "+_job);
 		_client->hql_query(result, m_ns, "create table "+_job+\
-				" (owned MAX_VERSIONS=1, handled MAX_VERSIONS=1)");
+				" (handled MAX_VERSIONS=1)");
 	}
 
 	m_querier.reset(new htQuerier(_client, _ns, _job));
@@ -65,14 +80,9 @@ hSpliterLocal::hSpliterLocal(ThriftClientPtr _client,
 	
 	//std::cout << "ns:" << _ns << " input:" << _input_table << std::endl;
 	m_input_scanner.reset(new htKeyScanner(_client, _ns, _input_table));
+	m_states_scanner.reset(new htCollScanner(_client, _ns, _job, "handled"));
 	
-	/*
-	std::set<std::string> state_colls;
-	state_colls.insert("owned");
-	state_colls.insert("handled");
-	m_states_scanner.reset(new htCustomScanner(_client, _ns, _job, state_colls));
-	
-	loadStates();*/
+	loadStates();
 	makeRanges();
 }
 
@@ -80,14 +90,13 @@ void hSpliterLocal::loadStates()
 {
 	while (!m_states_scanner->end())
 	{
-		htLine line = m_states_scanner->getNextLine();
-		m_key_states.insert(std::pair<std::string, KeyState> \
-						(line.key,
-								KeyState(line.cells["owned"],
-										line.cells["handled"])));
+		KeyValue cell = m_states_scanner->getNextCell();
+		m_keys_handled.insert(std::pair<std::string, bool> \
+						(cell.key, stringToBool(cell.value) ));
 	}
 }
 
+/*
 bool hSpliterLocal::isOwned(std::string key)
 {
 	std::tr1::unordered_map<std::string, KeyState>::iterator it = \
@@ -102,15 +111,16 @@ bool hSpliterLocal::isOwned(std::string key)
 		return false;
 	}	
 }
+*/
 
 bool hSpliterLocal::isHandled(std::string key)
 {
-	std::tr1::unordered_map<std::string, KeyState>::iterator it = \
-		m_key_states.find(key);
+	std::tr1::unordered_map<std::string, bool>::iterator it = \
+		m_keys_handled.find(key);
 	
-	if (it != m_key_states.end())
+	if (it != m_keys_handled.end())
 	{
-		return it->second.handled;
+		return it->second;
 	}
 	else
 	{
@@ -128,7 +138,7 @@ void hSpliterLocal::makeRanges()
 	while (!m_input_scanner->end())
 	{
 		key = m_input_scanner->getNextKey();
-		if (!isOwned(key))
+		if (!isHandled(key))
 		{
 			if (!beg_set)
 			{
@@ -142,7 +152,7 @@ void hSpliterLocal::makeRanges()
 				nkeys++;
 				if (nkeys >= m_key_step)
 				{
-					std::cout << "range: " << beg_key << " " << end_key << std::endl;
+					//std::cout << "range: " << beg_key << " " << end_key << std::endl;
 					m_free_ranges.push(KeyRange(beg_key, end_key));
 					beg_set = 0;
 					nkeys = 0;
@@ -160,26 +170,49 @@ void hSpliterLocal::makeRanges()
 	}
 	if (beg_set)
 	{
-		std::cout << "range: " << beg_key << " " << key << std::endl;
+		//std::cout << "range: " << beg_key << " " << key << std::endl;
 		m_free_ranges.push(KeyRange(beg_key, key));
 	}
 }
 
-hSpliterLocal::~hSpliterLocal()
-{
-}
-
 KeyRange hSpliterLocal::getSplit()
 {
-	
+	if (!m_free_ranges.empty())
+	{
+		KeyRange range = m_free_ranges.front();
+		m_free_ranges.pop();
+		// 
+		
+		return range;
+	}
+	else
+	{
+		return KeyRange("b", "a");
+		// reassign keys. find not handled ranges
+	}
 }
 
-bool hSpliterLocal::tryOwnKey(std::string key)
+bool hSpliterLocal::tryKeyCommit(std::string key)
 {
-	
+	// trylock key
 }
 
-void hSpliterLocal::setKeyHandled(std::string key)
+void hSpliterLocal::setKeyCommited(std::string key)
 {
+	std::tr1::unordered_map<std::string, bool>::iterator it = \
+		m_keys_handled.find(key);
 	
+	if (it != m_keys_handled.end())
+	{
+		it->second = true;
+	}
+	else
+	{
+		m_keys_handled.insert(std::pair<std::string, bool>(key, true));
+	}
+	m_writer->insertSync(KeyValue(key, "1"), "handled");
+}
+
+hSpliterLocal::~hSpliterLocal()
+{
 }
