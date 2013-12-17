@@ -42,13 +42,15 @@ hSpliterLocal::KeyState::KeyState(std::string _owned, std::string _handled)
 		
 hSpliterLocal::hSpliterLocal(ThriftClientPtr _client,
 				std::string _ns,
+				std::string _input_table,
 				std::string _job,
 				hSpliterClient::Mode mode,
-				size_t key_step):
-	m_client(_client),
-	m_job(_job),
-	m_key_step(key_step)
+				size_t key_step)
 {
+	m_client = _client;
+	m_job = _job;
+	m_key_step = key_step;
+	
 	m_ns = _client->namespace_open(_ns);
 	if (mode == hSpliterClient::START)
 	{
@@ -61,13 +63,16 @@ hSpliterLocal::hSpliterLocal(ThriftClientPtr _client,
 	m_querier.reset(new htQuerier(_client, _ns, _job));
 	m_writer.reset(new htCollWriterConc(_client, _ns, _job));
 	
-	m_input_scanner.reset(new htKeyScanner(_client, _ns, _job));
+	//std::cout << "ns:" << _ns << " input:" << _input_table << std::endl;
+	m_input_scanner.reset(new htKeyScanner(_client, _ns, _input_table));
+	
+	/*
 	std::set<std::string> state_colls;
 	state_colls.insert("owned");
 	state_colls.insert("handled");
 	m_states_scanner.reset(new htCustomScanner(_client, _ns, _job, state_colls));
 	
-	loadStates();
+	loadStates();*/
 	makeRanges();
 }
 
@@ -94,7 +99,7 @@ bool hSpliterLocal::isOwned(std::string key)
 	}
 	else
 	{
-		throw "hSpliterLocal::isOwned no such key in states: " + key;
+		return false;
 	}	
 }
 
@@ -109,19 +114,20 @@ bool hSpliterLocal::isHandled(std::string key)
 	}
 	else
 	{
-		throw "hSpliterLocal::isHandled no such key in states: " + key;
+		return false;
 	}
 }
 
 void hSpliterLocal::makeRanges()
 {
-	bool beg_set = 0;//, end_set = 0;
+	bool beg_set = 0;
 	std::string beg_key, end_key;
 	size_t nkeys;
+	std::string key;
 	
 	while (!m_input_scanner->end())
 	{
-		std::string key = m_input_scanner->getNextKey();
+		key = m_input_scanner->getNextKey();
 		if (!isOwned(key))
 		{
 			if (!beg_set)
@@ -131,11 +137,12 @@ void hSpliterLocal::makeRanges()
 				nkeys++;
 			}
 			else
-			{
+			{				
 				end_key = key;
 				nkeys++;
 				if (nkeys >= m_key_step)
 				{
+					std::cout << "range: " << beg_key << " " << end_key << std::endl;
 					m_free_ranges.push(KeyRange(beg_key, end_key));
 					beg_set = 0;
 					nkeys = 0;
@@ -150,7 +157,11 @@ void hSpliterLocal::makeRanges()
 				beg_set = 0;
 			}
 		}
-		
+	}
+	if (beg_set)
+	{
+		std::cout << "range: " << beg_key << " " << key << std::endl;
+		m_free_ranges.push(KeyRange(beg_key, key));
 	}
 }
 

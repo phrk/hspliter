@@ -54,6 +54,7 @@ public:
 	
 	hSpliterLocal(ThriftClientPtr _client,
 				std::string _ns,
+				std::string _input_table,
 				std::string _job,
 				hSpliterClient::Mode mode,
 				size_t key_step = 10);
