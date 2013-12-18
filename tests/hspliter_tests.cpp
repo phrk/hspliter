@@ -30,11 +30,23 @@ void hSpliterTests::testLocal()
 					"split_job",
 					hSpliterClient::START,
 					20);
-	
 	KeyRange range = spliter.getSplit();
+	
 	while (range.ok())
 	{
-		std::cout << range.toString() << std::endl;
+		//std::cout << range.toString() << std::endl;
+		htKeyScanner key_scanner (client, ns_name, "split_input", range);
+		
+		while (!key_scanner.end())
+		{
+			std::string key = key_scanner.getNextKey();
+			std::cout << key << " ";
+			
+			spliter.tryKeyCommit(key);
+			spliter.setKeyCommited(key);
+		}
+		
+		std::cout << std::endl;
 		range = spliter.getSplit();
 	}
 	

@@ -29,20 +29,17 @@ class hSpliterLocal : public hSpliterClient
 	htKeyScannerPtr m_input_scanner;
 	htCollScannerPtr m_states_scanner;
 	htCollWriterConcPtr m_writer;
-	/*
-	class KeyState
-	{
-		public:
-		//bool owned;		// only in-mem
-		bool handled;	// in db
-		
-		KeyState(bool _owned, bool _handled);
-		KeyState(std::string _owned, std::string _handled);
-	};*/
 	
 	std::tr1::unordered_map<std::string, bool> m_keys_handled;
+	// key / timestamp
+	std::tr1::unordered_map<std::string, uint64_t> m_keys_commiting;
+	
 	std::queue<KeyRange> m_free_ranges;
 	
+	uint64_t m_nkeys;
+	boost::atomic<uint64_t> m_nhandled;
+	
+	hAutoLockPtr m_lock;
 	//std::queue<KeyRange> m_nothandled_ranges;
 	
 	//bool isOwned(std::string key);

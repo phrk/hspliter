@@ -65,7 +65,7 @@ hSpliterLocal::hSpliterLocal(ThriftClientPtr _client,
 	m_client = _client;
 	m_job = _job;
 	m_key_step = key_step;
-	
+	m_lock.reset(new hAutoLock);
 	m_ns = _client->namespace_open(_ns);
 	if (mode == hSpliterClient::START)
 	{
@@ -132,35 +132,38 @@ void hSpliterLocal::makeRanges()
 {
 	bool beg_set = 0;
 	std::string beg_key, end_key;
-	size_t nkeys;
+	size_t nkeys_in_step;
+	m_nkeys = 0;
 	std::string key;
 	
 	while (!m_input_scanner->end())
 	{
 		key = m_input_scanner->getNextKey();
+		m_nkeys++;
 		if (!isHandled(key))
 		{
 			if (!beg_set)
 			{
 				beg_key = key;
 				beg_set = 1;
-				nkeys++;
+				nkeys_in_step++;
 			}
 			else
 			{				
 				end_key = key;
-				nkeys++;
-				if (nkeys >= m_key_step)
+				nkeys_in_step++;
+				if (nkeys_in_step >= m_key_step)
 				{
 					//std::cout << "range: " << beg_key << " " << end_key << std::endl;
 					m_free_ranges.push(KeyRange(beg_key, end_key));
 					beg_set = 0;
-					nkeys = 0;
+					nkeys_in_step = 0;
 				}
 			}
 		}
 		else
 		{
+			m_nhandled++;
 			if (beg_set)
 			{
 				m_free_ranges.push(KeyRange(beg_key, end_key));
@@ -177,6 +180,7 @@ void hSpliterLocal::makeRanges()
 
 KeyRange hSpliterLocal::getSplit()
 {
+	hLockTicket lock_ticket = m_lock->lock();
 	if (!m_free_ranges.empty())
 	{
 		KeyRange range = m_free_ranges.front();
@@ -187,6 +191,7 @@ KeyRange hSpliterLocal::getSplit()
 	}
 	else
 	{
+		std::cout << "handled " << m_nhandled << " of " << m_nkeys << std::endl; 
 		return KeyRange("b", "a");
 		// reassign keys. find not handled ranges
 	}
@@ -194,11 +199,23 @@ KeyRange hSpliterLocal::getSplit()
 
 bool hSpliterLocal::tryKeyCommit(std::string key)
 {
+	hLockTicket lock_ticket = m_lock->lock();
 	// trylock key
+	std::tr1::unordered_map<std::string, uint64_t>::iterator it = 
+			m_keys_commiting.find(key);
+	if (it != m_keys_commiting.end())
+	{
+		return false;
+	}
+	
+	m_keys_commiting.insert(std::pair<std::string, uint64_t>(key, time(0)));
+	
+	return true;
 }
 
 void hSpliterLocal::setKeyCommited(std::string key)
 {
+	hLockTicket lock_ticket = m_lock->lock();
 	std::tr1::unordered_map<std::string, bool>::iterator it = \
 		m_keys_handled.find(key);
 	
@@ -211,6 +228,7 @@ void hSpliterLocal::setKeyCommited(std::string key)
 		m_keys_handled.insert(std::pair<std::string, bool>(key, true));
 	}
 	m_writer->insertSync(KeyValue(key, "1"), "handled");
+	m_nhandled++;
 }
 
 hSpliterLocal::~hSpliterLocal()
