@@ -74,17 +74,25 @@ hSpliterLocal::hSpliterLocal(ThriftClientPtr _client,
 		_client->hql_query(result, m_ns, "create table "+_job+\
 				" (handled MAX_VERSIONS=1)");
 		std::cout << "TABLES DROPPED \n";
-		sleep(2);
+		createDbAccessors(_ns, _job, _input_table);
 	}
-	m_querier.reset(new htQuerier(_client, _ns, _job));
-	m_writer.reset(new htCollWriterConc(_client, _ns, _job));
+	else
+	{
+		createDbAccessors(_ns, _job, _input_table);
+		loadStates();
+	}
 	
-	//std::cout << "ns:" << _ns << " input:" << _input_table << std::endl;
-	m_input_scanner.reset(new htKeyScanner(_client, _ns, _input_table));
-	m_states_scanner.reset(new htCollScanner(_client, _ns, _job, "handled"));
-	
-	loadStates();
 	makeRanges();
+}
+
+void hSpliterLocal::createDbAccessors(std::string _ns,
+								std::string _job,
+								std::string _input_table)
+{
+	m_querier.reset(new htQuerier(m_client, _ns, _job));
+	m_writer.reset(new htCollWriterConc(m_client, _ns, _job));
+	m_input_scanner.reset(new htKeyScanner(m_client, _ns, _input_table));
+	m_states_scanner.reset(new htCollScanner(m_client, _ns, _job, "handled"));
 }
 
 void hSpliterLocal::loadStates()

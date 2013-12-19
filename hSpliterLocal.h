@@ -37,6 +37,7 @@ class hSpliterLocal : public hSpliterClient
 	std::queue<KeyRange> m_free_ranges;
 	
 	uint64_t m_nkeys;
+	uint64_t m_nreassigned;
 	boost::atomic<uint64_t> m_nhandled;
 	
 	hAutoLockPtr m_lock;
@@ -46,6 +47,9 @@ class hSpliterLocal : public hSpliterClient
 	bool isCommiting(std::string key);
 	bool isHandled(std::string key);
 	
+	void createDbAccessors(std::string _ns,
+								std::string _job,
+								std::string _input_table);
 	void loadStates();
 	void makeRanges();
 	

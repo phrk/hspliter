@@ -46,8 +46,8 @@ void hSpliterTests::testLocal()
 			
 			if (i==5) break;
 			
-			//spliter.tryKeyCommit(key);
-			//spliter.setKeyCommited(key);
+			spliter.tryKeyCommit(key);
+			spliter.setKeyCommited(key);
 			i++;
 		}
 		
