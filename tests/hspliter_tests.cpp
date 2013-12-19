@@ -34,9 +34,24 @@ void hSpliterTests::testLocal()
 	
 	while (range.ok())
 	{
-		//std::cout << range.toString() << std::endl;
+		std::cout << range.toString() << std::endl;
 		htKeyScanner key_scanner (client, ns_name, "split_input", range);
 		
+		int i = 0;
+		
+		while (!key_scanner.end() && i!=5)
+		{
+			std::string key = key_scanner.getNextKey();
+			std::cout << key << " ";
+			
+			if (i==5) break;
+			
+			//spliter.tryKeyCommit(key);
+			//spliter.setKeyCommited(key);
+			i++;
+		}
+		
+		if (i==5)
 		while (!key_scanner.end())
 		{
 			std::string key = key_scanner.getNextKey();

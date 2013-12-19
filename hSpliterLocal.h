@@ -43,6 +43,7 @@ class hSpliterLocal : public hSpliterClient
 	//std::queue<KeyRange> m_nothandled_ranges;
 	
 	//bool isOwned(std::string key);
+	bool isCommiting(std::string key);
 	bool isHandled(std::string key);
 	
 	void loadStates();
