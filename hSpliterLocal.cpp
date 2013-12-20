@@ -206,61 +206,57 @@ void hSpliterLocal::makeRanges()
 KeyRange hSpliterLocal::getSplit()
 {
 	hLockTicket lock_ticket = m_lock->lock();
-	if (!m_free_ranges.empty())
-	{
+	if (!m_free_ranges.empty()) {
 		KeyRange range = m_free_ranges.front();
 		m_free_ranges.pop();
-		// 
 		
 		return range;
 	}
 	else
 	{
-		// reassign keys. find not handled ranges
-		std::cout << "trying reassing\n";
-		std::tr1::unordered_map<std::string, bool>::iterator it =
-				m_keys_handled.begin();
-		std::string key_beg;
-		std::string key_end;
-		bool beg_set = false;
-		
-		while (it != m_keys_handled.end())
-		{
-			std::string key = it->first;
-			//std::cout << "key " << key << " handled " << it->second << std::endl;
-			if (!it->second) //not handled  // && !isCommiting(key))
-			{
-				if (beg_set)
-				{
-					key_end = key;
+		// find not handled ranges
+		size_t nscans = 0;
+		while (true) {
+			std::string key_beg;
+			std::string key_end;
+			bool beg_set = false;
+			size_t nkeys = 0;
+
+			while (!m_input_scanner->end()) {
+				std::string key = m_input_scanner->getNextKey();
+				if (!isHandled(key)) {
+					if (beg_set) {
+						nkeys++;
+						key_end = key;
+						if (nkeys >= m_key_step)
+							break;
+					}
+					else {
+						key_beg = key_end = key;
+						beg_set = true;
+					}
 				}
-				else
-				{
-					key_beg = key_end = key;
-					beg_set = true;
-				}
-			}
-			else
-			{
-				//std::cout << "key already handled " << key << std::endl;
-				if (beg_set)
-				{
-					key_end = key;
-					break;
+				else {
+					if (beg_set) {
+						key_end = key;
+						break;
+					}
 				}
 			}
-			it++;
+
+			if (beg_set) {
+				return KeyRange(key_beg, key_end);
+			}
+			else {
+				nscans++;
+				if (nscans>2) {
+					std::cout << "handled " << m_nhandled 
+							<< " of " << m_nkeys << std::endl; 
+					return KeyRange("b", "a");
+				}
+				m_input_scanner->reset();
+			}
 		}
-		
-		if (beg_set)
-		{
-			std::cout << "reassigning " << key_beg << " " << key_end << std::endl;
-			return KeyRange(key_beg, key_end);
-		}
-		
-		std::cout << "handled " << m_nhandled << " of " << m_nkeys << std::endl; 
-		return KeyRange("b", "a");
-		
 	}
 }
 
