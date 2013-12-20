@@ -31,13 +31,14 @@ void hSpliterTests::testLocal()
 					hSpliterClient::START,
 					20);
 	KeyRange range = spliter.getSplit();
+	htKeyScanner key_scanner (client, ns_name, "split_input", range);
 	
 	int i = 0;
 	
 	while (range.ok())
 	{
 		std::cout << range.toString() << std::endl;
-		htKeyScanner key_scanner (client, ns_name, "split_input", range);		
+		key_scanner.reset(range);		
 
 		while (!key_scanner.end() && i<=2)
 		{

@@ -26,5 +26,7 @@ public:
 	virtual void setKeyCommited(std::string key) = 0;
 };
 
+typedef boost::shared_ptr<hSpliterClient> hSpliterClientPtr;
+
 #endif	/* HSPLITERCLIENT_H */
 
