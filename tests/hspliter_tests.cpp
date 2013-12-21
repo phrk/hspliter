@@ -24,14 +24,15 @@ void hSpliterTests::testLocal()
 	}
 	
 	sleep(1);
-	hSpliterLocal spliter(client,
+	htConnPoolPtr m_db_pool(new htConnPool("localhost", 38080, 5));
+	hSpliterLocal spliter(m_db_pool,
 					 ns_name,
 					"split_input",
 					"split_job",
 					hSpliterClient::START,
 					20);
 	KeyRange range = spliter.getSplit();
-	htKeyScanner key_scanner (client, ns_name, "split_input", range);
+	htKeyScanner key_scanner (m_db_pool, ns_name, "split_input", range);
 	
 	int i = 0;
 	

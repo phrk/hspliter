@@ -55,23 +55,25 @@ bool stringToBool(const std::string &_handled)
 	}
 }
 		
-hSpliterLocal::hSpliterLocal(ThriftClientPtr _client,
+hSpliterLocal::hSpliterLocal(htConnPoolPtr conn_pool,
 				std::string _ns,
 				std::string _input_table,
 				std::string _job,
 				hSpliterClient::Mode mode,
 				size_t key_step)
 {
-	m_client = _client;
+	m_conn_pool = conn_pool;
 	m_job = _job;
 	m_key_step = key_step;
 	m_lock.reset(new hAutoLock);
-	m_ns = _client->namespace_open(_ns);
+	
+	htConnPool::htSession sess = m_conn_pool->get();
+	m_ns = sess.client->namespace_open(_ns);
 	if (mode == hSpliterClient::START)
 	{
 		Hypertable::ThriftGen::HqlResult result;
-		_client->hql_query(result, m_ns, "drop table if exists "+_job);
-		_client->hql_query(result, m_ns, "create table "+_job+\
+		sess.client->hql_query(result, m_ns, "drop table if exists "+_job);
+		sess.client->hql_query(result, m_ns, "create table "+_job+\
 				" (handled MAX_VERSIONS=1)");
 		std::cout << "TABLES DROPPED \n";
 		createDbAccessors(_ns, _job, _input_table);
@@ -89,10 +91,11 @@ void hSpliterLocal::createDbAccessors(std::string _ns,
 								std::string _job,
 								std::string _input_table)
 {
-	m_querier.reset(new htQuerier(m_client, _ns, _job));
-	m_writer.reset(new htCollWriterConc(m_client, _ns, _job));
-	m_input_scanner.reset(new htKeyScanner(m_client, _ns, _input_table));
-	m_states_scanner.reset(new htCollScanner(m_client, _ns, _job, "handled"));
+/*	
+	m_querier.reset(new htQuerier(m_conn_pool, _ns, _job));
+	m_writer.reset(new htCollWriterConc(m_conn_pool, _ns, _job));
+	m_input_scanner.reset(new htKeyScanner(m_conn_pool, _ns, _input_table));
+	m_states_scanner.reset(new htCollScanner(m_conn_pool, _ns, _job, "handled"));*/
 }
 
 void hSpliterLocal::loadStates()
@@ -205,7 +208,7 @@ void hSpliterLocal::makeRanges()
 
 KeyRange hSpliterLocal::getSplit()
 {
-	hLockTicket lock_ticket = m_lock->lock();
+	hLockTicketPtr lock_ticket = m_lock->lock();
 	if (!m_free_ranges.empty()) {
 		KeyRange range = m_free_ranges.front();
 		m_free_ranges.pop();
@@ -262,7 +265,7 @@ KeyRange hSpliterLocal::getSplit()
 
 bool hSpliterLocal::tryKeyCommit(std::string key)
 {
-	hLockTicket lock_ticket = m_lock->lock();
+	hLockTicketPtr lock_ticket = m_lock->lock();
 	// trylock key
 	std::tr1::unordered_map<std::string, uint64_t>::iterator it = 
 			m_keys_commiting.find(key);
@@ -278,7 +281,7 @@ bool hSpliterLocal::tryKeyCommit(std::string key)
 
 void hSpliterLocal::setKeyCommited(std::string key)
 {
-	hLockTicket lock_ticket = m_lock->lock();
+	hLockTicketPtr lock_ticket = m_lock->lock();
 	std::tr1::unordered_map<std::string, bool>::iterator it = \
 		m_keys_handled.find(key);
 	
@@ -291,7 +294,7 @@ void hSpliterLocal::setKeyCommited(std::string key)
 		m_keys_handled.insert(std::pair<std::string, bool>(key, true));
 	}
 	m_nhandled++;
-	lock_ticket.unlock();
+	lock_ticket->unlock();
 	
 	m_writer->insertSync(KeyValue(key, "1"), "handled");
 }

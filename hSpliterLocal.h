@@ -19,7 +19,7 @@
 
 class hSpliterLocal : public hSpliterClient
 {
-	ThriftClientPtr m_client;
+	htConnPoolPtr m_conn_pool;
 	Hypertable::ThriftGen::Namespace m_ns;
 	
 	std::string m_job;
@@ -55,7 +55,7 @@ class hSpliterLocal : public hSpliterClient
 	
 public:
 	
-	hSpliterLocal(ThriftClientPtr _client,
+	hSpliterLocal(htConnPoolPtr conn_pool,
 				std::string _ns,
 				std::string _input_table,
 				std::string _job,
