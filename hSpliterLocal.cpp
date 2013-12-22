@@ -66,6 +66,7 @@ hSpliterLocal::hSpliterLocal(htConnPoolPtr conn_pool,
 	m_job = _job;
 	m_key_step = key_step;
 	m_lock.reset(new hAutoLock);
+	m_nhandled = 0;
 	
 	htConnPool::htSession sess = m_conn_pool->get();
 	m_ns = sess.client->namespace_open(_ns);
@@ -91,11 +92,9 @@ void hSpliterLocal::createDbAccessors(std::string _ns,
 								std::string _job,
 								std::string _input_table)
 {
-/*	
-	m_querier.reset(new htQuerier(m_conn_pool, _ns, _job));
-	m_writer.reset(new htCollWriterConc(m_conn_pool, _ns, _job));
 	m_input_scanner.reset(new htKeyScanner(m_conn_pool, _ns, _input_table));
-	m_states_scanner.reset(new htCollScanner(m_conn_pool, _ns, _job, "handled"));*/
+	m_states_scanner.reset(new htCollScanner(m_conn_pool, _ns, _job, "handled"));
+	m_writer.reset(new htCollWriterConc(m_conn_pool, _ns, _job));
 }
 
 void hSpliterLocal::loadStates()
@@ -105,6 +104,7 @@ void hSpliterLocal::loadStates()
 		KeyValue cell = m_states_scanner->getNextCell();
 		m_keys_handled.insert(std::pair<std::string, bool> \
 						(cell.key, stringToBool(cell.value) ));
+		//m_nhandled++;
 		//std::cout << "loaded state: " << stringToBool(cell.value) << std::endl;
 	}
 }

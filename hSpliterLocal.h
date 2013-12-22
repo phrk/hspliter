@@ -25,7 +25,6 @@ class hSpliterLocal : public hSpliterClient
 	std::string m_job;
 	size_t m_key_step;
 	
-	htQuerierPtr m_querier; 
 	htKeyScannerPtr m_input_scanner;
 	htCollScannerPtr m_states_scanner;
 	htCollWriterConcPtr m_writer;
@@ -67,6 +66,8 @@ public:
 	virtual bool tryKeyCommit(std::string key);
 	virtual void setKeyCommited(std::string key);
 };
+
+typedef boost::shared_ptr<hSpliterLocal> hSpliterLocalPtr;
 
 /*
  * 

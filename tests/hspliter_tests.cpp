@@ -2,6 +2,8 @@
 
 void hSpliterTests::testLocal()
 {
+	htConnPoolPtr conn_pool(new htConnPool("localhost", 38080, 10));
+	
 	ThriftClientPtr client( new ThriftClient("localhost", 38080));
 	const std::string ns_name = "test";
 	Hypertable::ThriftGen::Namespace ns = client->namespace_open(ns_name);
@@ -11,10 +13,10 @@ void hSpliterTests::testLocal()
 	client->hql_query(result, ns, "create table split_input (num MAX_VERSIONS=1)");
 	client->close_namespace(ns);
 	
-	htCollWriterConc writer(client, ns_name, "split_input");
+	htCollWriterConc writer(conn_pool, ns_name, "split_input");
 	
 	uint32_t control_summ;
-	for (int i = 0; i<100; i++)
+	for (int i = 0; i<1000; i++)
 	{
 		char bf[255];
 		sprintf(bf, "%d", i);
@@ -24,15 +26,15 @@ void hSpliterTests::testLocal()
 	}
 	
 	sleep(1);
-	htConnPoolPtr m_db_pool(new htConnPool("localhost", 38080, 5));
-	hSpliterLocal spliter(m_db_pool,
+	
+	hSpliterLocalPtr spliter(new hSpliterLocal(conn_pool,
 					 ns_name,
 					"split_input",
 					"split_job",
 					hSpliterClient::START,
-					20);
-	KeyRange range = spliter.getSplit();
-	htKeyScanner key_scanner (m_db_pool, ns_name, "split_input", range);
+					20));
+	KeyRange range = spliter->getSplit();
+	htKeyScanner key_scanner (conn_pool, ns_name, "split_input", range);
 	
 	int i = 0;
 	
@@ -46,8 +48,8 @@ void hSpliterTests::testLocal()
 			std::string key = key_scanner.getNextKey();
 			std::cout << key << " ";
 			
-			//spliter.tryKeyCommit(key);
-			//spliter.setKeyCommited(key);
+			spliter->tryKeyCommit(key);
+			spliter->setKeyCommited(key);
 		}
 		
 		while (!key_scanner.end() && i>2)
@@ -55,14 +57,18 @@ void hSpliterTests::testLocal()
 			std::string key = key_scanner.getNextKey();
 			std::cout << key << " ";
 			
-			spliter.tryKeyCommit(key);
-			spliter.setKeyCommited(key);
+			spliter->tryKeyCommit(key);
+			spliter->setKeyCommited(key);
 		}
 		
 		std::cout << std::endl;
-		range = spliter.getSplit();
+		range = spliter->getSplit();
 		i++;
+		
+		//if (i==10) break;
 	}
+	
+	//spliter.reset();
 	
 	
 }
