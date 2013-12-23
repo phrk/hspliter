@@ -16,8 +16,7 @@ void hSpliterTests::testLocal()
 	htCollWriterConc writer(conn_pool, ns_name, "split_input");
 	
 	uint32_t control_summ;
-	for (int i = 0; i<1000; i++)
-	{
+	for (int i = 0; i<1000; i++) {
 		char bf[255];
 		sprintf(bf, "%d", i);
 		writer.insertSync(KeyValue(bf, bf), "num");
@@ -38,13 +37,11 @@ void hSpliterTests::testLocal()
 	
 	int i = 0;
 	
-	while (range.ok())
-	{
+	while (range.ok()) {
 		std::cout << range.toString() << std::endl;
 		key_scanner.reset(range);		
 
-		while (!key_scanner.end() && i<=2)
-		{
+		while (!key_scanner.end() && i<=2) {
 			std::string key = key_scanner.getNextKey();
 			std::cout << key << " ";
 			
@@ -52,8 +49,7 @@ void hSpliterTests::testLocal()
 			spliter->setKeyCommited(key);
 		}
 		
-		while (!key_scanner.end() && i>2)
-		{
+		while (!key_scanner.end() && i>2) {
 			std::string key = key_scanner.getNextKey();
 			std::cout << key << " ";
 			
@@ -69,6 +65,4 @@ void hSpliterTests::testLocal()
 	}
 	
 	//spliter.reset();
-	
-	
 }

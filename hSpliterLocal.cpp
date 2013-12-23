@@ -41,16 +41,13 @@ hSpliterLocal::KeyState::KeyState(std::string _owned, std::string _handled)
 
 bool stringToBool(const std::string &_handled)
 {
-	if (_handled=="1")
-	{
+	if (_handled=="1") {
 		return true;
 	}
-	else if (_handled=="0")
-	{
+	else if (_handled=="0") {
 		return false;
 	}
-	else
-	{
+	else {
 		throw "stringToBool undefined value: " + _handled;
 	}
 }
@@ -70,8 +67,7 @@ hSpliterLocal::hSpliterLocal(htConnPoolPtr conn_pool,
 	
 	htConnPool::htSession sess = m_conn_pool->get();
 	m_ns = sess.client->namespace_open(_ns);
-	if (mode == hSpliterClient::START)
-	{
+	if (mode == hSpliterClient::START) {
 		Hypertable::ThriftGen::HqlResult result;
 		sess.client->hql_query(result, m_ns, "drop table if exists "+_job);
 		sess.client->hql_query(result, m_ns, "create table "+_job+\
@@ -79,8 +75,7 @@ hSpliterLocal::hSpliterLocal(htConnPoolPtr conn_pool,
 		std::cout << "TABLES DROPPED \n";
 		createDbAccessors(_ns, _job, _input_table);
 	}
-	else
-	{
+	else {
 		createDbAccessors(_ns, _job, _input_table);
 		loadStates();
 	}
@@ -99,8 +94,7 @@ void hSpliterLocal::createDbAccessors(std::string _ns,
 
 void hSpliterLocal::loadStates()
 {
-	while (!m_states_scanner->end())
-	{
+	while (!m_states_scanner->end()) {
 		KeyValue cell = m_states_scanner->getNextCell();
 		m_keys_handled.insert(std::pair<std::string, bool> \
 						(cell.key, stringToBool(cell.value) ));
@@ -130,12 +124,10 @@ bool hSpliterLocal::isCommiting(std::string key)
 {
 	std::tr1::unordered_map<std::string, uint64_t>::iterator it = 
 			m_keys_commiting.find(key);
-	if (it == m_keys_commiting.end())
-	{
+	if (it == m_keys_commiting.end()) {
 		return false;
 	}
-	else
-	{
+	else {
 		return true;
 	}
 }
@@ -145,12 +137,10 @@ bool hSpliterLocal::isHandled(std::string key)
 	std::tr1::unordered_map<std::string, bool>::iterator it = \
 		m_keys_handled.find(key);
 	
-	if (it != m_keys_handled.end())
-	{
+	if (it != m_keys_handled.end()) {
 		return it->second;
 	}
-	else
-	{
+	else {
 		return false;
 	}
 }
@@ -163,25 +153,20 @@ void hSpliterLocal::makeRanges()
 	m_nkeys = 0;
 	std::string key;
 	
-	while (!m_input_scanner->end())
-	{
+	while (!m_input_scanner->end()) {
 		key = m_input_scanner->getNextKey();
 		m_keys_handled.insert(std::pair<std::string,bool>(key, false));
 		m_nkeys++;
-		if (!isHandled(key))
-		{
-			if (!beg_set)
-			{
+		if (!isHandled(key)) {
+			if (!beg_set) {
 				beg_key = key;
 				beg_set = 1;
 				nkeys_in_step++;
 			}
-			else
-			{				
+			else {			
 				end_key = key;
 				nkeys_in_step++;
-				if (nkeys_in_step >= m_key_step)
-				{
+				if (nkeys_in_step >= m_key_step) {
 					//std::cout << "range: " << beg_key << " " << end_key << std::endl;
 					m_free_ranges.push(KeyRange(beg_key, end_key));
 					beg_set = 0;
@@ -189,18 +174,15 @@ void hSpliterLocal::makeRanges()
 				}
 			}
 		}
-		else
-		{
+		else {
 			m_nhandled++;
-			if (beg_set)
-			{
+			if (beg_set) {
 				m_free_ranges.push(KeyRange(beg_key, end_key));
 				beg_set = 0;
 			}
 		}
 	}
-	if (beg_set)
-	{
+	if (beg_set) {
 		//std::cout << "range: " << beg_key << " " << key << std::endl;
 		m_free_ranges.push(KeyRange(beg_key, key));
 	}
@@ -269,8 +251,7 @@ bool hSpliterLocal::tryKeyCommit(std::string key)
 	// trylock key
 	std::tr1::unordered_map<std::string, uint64_t>::iterator it = 
 			m_keys_commiting.find(key);
-	if (it != m_keys_commiting.end())
-	{
+	if (it != m_keys_commiting.end()) {
 		return false;
 	}
 	
@@ -285,12 +266,10 @@ void hSpliterLocal::setKeyCommited(std::string key)
 	std::tr1::unordered_map<std::string, bool>::iterator it = \
 		m_keys_handled.find(key);
 	
-	if (it != m_keys_handled.end())
-	{
+	if (it != m_keys_handled.end()) {
 		it->second = true;
 	}
-	else
-	{
+	else {
 		m_keys_handled.insert(std::pair<std::string, bool>(key, true));
 	}
 	m_nhandled++;
