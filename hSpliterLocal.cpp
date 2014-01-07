@@ -72,7 +72,7 @@ hSpliterLocal::hSpliterLocal(htConnPoolPtr conn_pool,
 		sess.client->hql_query(result, m_ns, "drop table if exists "+_job);
 		sess.client->hql_query(result, m_ns, "create table "+_job+\
 				" (handled MAX_VERSIONS=1)");
-		std::cout << "TABLES DROPPED \n";
+		std::cout << "SPLITER TABLES DROPPED \n";
 		createDbAccessors(_ns, _job, _input_table);
 	}
 	else {
