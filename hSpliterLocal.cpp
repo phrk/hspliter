@@ -59,7 +59,7 @@ hSpliterLocal::hSpliterLocal(htConnPoolPtr conn_pool,
 				hSpliterClient::Mode mode,
 				size_t key_step)
 {
-	m_conn_pool = conn_pool;
+	m_conn_pool.reset(new htConnPool(*conn_pool));
 	m_job = _job;
 	m_key_step = key_step;
 	m_lock.reset(new hAutoLock);
@@ -87,20 +87,26 @@ void hSpliterLocal::createDbAccessors(std::string _ns,
 								std::string _job,
 								std::string _input_table)
 {
-	m_input_scanner.reset(new htKeyScanner(m_conn_pool, _ns, _input_table));
-	m_states_scanner.reset(new htCollScanner(m_conn_pool, _ns, _job, "handled"));
-	m_writer.reset(new htCollWriterConc(m_conn_pool, _ns, _job));
+	htConnPoolPtr pool0(new htConnPool(*m_conn_pool.get()));
+	htConnPoolPtr pool1(new htConnPool(*m_conn_pool.get()));
+	htConnPoolPtr pool2(new htConnPool(*m_conn_pool.get()));
+	m_input_scanner.reset(new htKeyScanner(pool0, _ns, _input_table));
+	m_states_scanner.reset(new htCollScanner(pool1, _ns, _job, "handled"));
+	m_writer.reset(new htCollWriterConc(pool2, _ns, _job));
 }
 
 void hSpliterLocal::loadStates()
 {
+	int loaded = 0;
 	while (!m_states_scanner->end()) {
 		KeyValue cell = m_states_scanner->getNextCell();
 		m_keys_handled.insert(std::pair<std::string, bool> \
 						(cell.key, stringToBool(cell.value) ));
+		loaded++;
 		//m_nhandled++;
 		//std::cout << "loaded state: " << stringToBool(cell.value) << std::endl;
 	}
+	std::cout << "hSpliterLocal::loadStates loaded: " << loaded << std::endl;
 }
 
 /*
@@ -132,7 +138,7 @@ bool hSpliterLocal::isCommiting(std::string key)
 	}
 }
 
-bool hSpliterLocal::isHandled(std::string key)
+bool hSpliterLocal::isHandled(const std::string &key)
 {
 	std::tr1::unordered_map<std::string, bool>::iterator it = \
 		m_keys_handled.find(key);
@@ -147,6 +153,7 @@ bool hSpliterLocal::isHandled(std::string key)
 
 void hSpliterLocal::makeRanges()
 {
+	std::cout << "hSpliterLocal::makeRanges\n";
 	bool beg_set = 0;
 	std::string beg_key, end_key;
 	size_t nkeys_in_step;
@@ -155,8 +162,13 @@ void hSpliterLocal::makeRanges()
 	
 	while (!m_input_scanner->end()) {
 		key = m_input_scanner->getNextKey();
-		m_keys_handled.insert(std::pair<std::string,bool>(key, false));
+		//m_keys_handled.insert(std::pair<std::string,bool>(key, false));
 		m_nkeys++;
+		
+		if (m_nkeys % 1000 == 0)
+			std::cout << "key: " << key << " n: " << m_nkeys << std::endl;
+		continue;
+		
 		if (!isHandled(key)) {
 			if (!beg_set) {
 				beg_key = key;
@@ -181,11 +193,16 @@ void hSpliterLocal::makeRanges()
 				beg_set = 0;
 			}
 		}
+		
+		if (m_nkeys % 10 == 0) 
+			std::cout << "looked keys: " << m_nkeys << " free ranges: " <<
+					m_free_ranges.size() << std::endl; 
 	}
 	if (beg_set) {
 		//std::cout << "range: " << beg_key << " " << key << std::endl;
 		m_free_ranges.push(KeyRange(beg_key, key));
 	}
+	std::cout << "makeRanges finished\n";
 }
 
 KeyRange hSpliterLocal::getSplit()

@@ -44,7 +44,7 @@ class hSpliterLocal : public hSpliterClient
 	
 	//bool isOwned(std::string key);
 	bool isCommiting(std::string key);
-	bool isHandled(std::string key);
+	bool isHandled(const std::string &key);
 	
 	void createDbAccessors(std::string _ns,
 								std::string _job,
@@ -59,7 +59,7 @@ public:
 				std::string _input_table,
 				std::string _job,
 				hSpliterClient::Mode mode,
-				size_t key_step = 10);
+				size_t key_step = 1000);
 	
 	virtual ~hSpliterLocal();
 	virtual KeyRange getSplit();
