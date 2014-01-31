@@ -36,7 +36,7 @@ class hSpliterLocal : public hSpliterClient
 	std::queue<KeyRange> m_free_ranges;
 	
 	uint64_t m_nkeys;
-	uint64_t m_nreassigned;
+//	uint64_t m_nreassigned;
 	boost::atomic<uint64_t> m_nhandled;
 	
 	hAutoLockPtr m_lock;

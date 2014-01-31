@@ -15,7 +15,7 @@ void hSpliterTests::testLocal()
 	
 	htCollWriterConc writer(conn_pool, ns_name, "split_input");
 	
-	uint32_t control_summ;
+	uint32_t control_summ = 0;
 	for (int i = 0; i<1000; i++) {
 		char bf[255];
 		sprintf(bf, "%d", i);
