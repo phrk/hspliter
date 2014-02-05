@@ -160,6 +160,7 @@ void hSpliterLocal::makeRanges()
 	m_nkeys = 0;
 	std::string key;
 	
+	m_input_scanner->reset();
 	while (!m_input_scanner->end()) {
 		key = m_input_scanner->getNextKey();
 		//m_keys_handled.insert(std::pair<std::string,bool>(key, false));
@@ -208,14 +209,20 @@ void hSpliterLocal::makeRanges()
 KeyRange hSpliterLocal::getSplit()
 {
 	hLockTicketPtr lock_ticket = m_lock->lock();
+	if (m_free_ranges.empty()) {
+		std::cout << "________hSpliterLocal::getSplit MakeRanges()\n"; 
+		makeRanges();
+	}
+	
 	if (!m_free_ranges.empty()) {
 		KeyRange range = m_free_ranges.front();
-		m_free_ranges.pop();
-		
+		m_free_ranges.pop();	
 		return range;
-	}
-	else
-	{
+		
+	} else
+		return KeyRange::getEmptyRange();	
+	
+	/*
 		// find not handled ranges
 		size_t nscans = 0;
 		while (true) {
@@ -259,7 +266,7 @@ KeyRange hSpliterLocal::getSplit()
 				m_input_scanner->reset();
 			}
 		}
-	}
+	}*/
 }
 
 bool hSpliterLocal::tryKeyCommit(std::string key)
