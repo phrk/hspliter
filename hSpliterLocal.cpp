@@ -65,17 +65,24 @@ hSpliterLocal::hSpliterLocal(htConnPoolPtr conn_pool,
 	m_lock.reset(new hAutoLock);
 	m_nhandled = 0;
 	
-	htConnPool::htSession sess = m_conn_pool->get();
-	m_ns = sess.client->namespace_open(_ns);
 	if (mode == hSpliterClient::START) {
-		Hypertable::ThriftGen::HqlResult result;
-		sess.client->hql_query(result, m_ns, "drop table if exists "+_job);
-		sess.client->hql_query(result, m_ns, "create table "+_job+\
+		{
+			htConnPool::htSession sess = m_conn_pool->get();
+			m_ns = sess.client->namespace_open(_ns);
+			Hypertable::ThriftGen::HqlResult result;
+			sess.client->hql_query(result, m_ns, "drop table if exists "+_job);
+			sess.client->hql_query(result, m_ns, "create table "+_job+\
 				" (handled MAX_VERSIONS=1)");
-		std::cout << "SPLITER TABLES DROPPED \n";
+			std::cout << "SPLITER TABLES DROPPED \n";
+			sleep(2);
+		}
 		createDbAccessors(_ns, _job, _input_table);
 	}
 	else {
+		{
+			htConnPool::htSession sess = m_conn_pool->get();
+			m_ns = sess.client->namespace_open(_ns);
+		}
 		createDbAccessors(_ns, _job, _input_table);
 		loadStates();
 	}
@@ -87,12 +94,12 @@ void hSpliterLocal::createDbAccessors(std::string _ns,
 								std::string _job,
 								std::string _input_table)
 {
-	htConnPoolPtr pool0(new htConnPool(*m_conn_pool.get()));
-	htConnPoolPtr pool1(new htConnPool(*m_conn_pool.get()));
-	htConnPoolPtr pool2(new htConnPool(*m_conn_pool.get()));
-	m_input_scanner.reset(new htKeyScanner(pool0, _ns, _input_table));
-	m_states_scanner.reset(new htCollScanner(pool1, _ns, _job, "handled"));
-	m_writer.reset(new htCollWriterConc(pool2, _ns, _job));
+	//htConnPoolPtr pool0(new htConnPool(*m_conn_pool.get()));
+	//htConnPoolPtr pool1(new htConnPool(*m_conn_pool.get()));
+	//htConnPoolPtr pool2(new htConnPool(*m_conn_pool.get()));
+	m_input_scanner.reset(new htKeyScanner(m_conn_pool, _ns, _input_table));
+	m_states_scanner.reset(new htCollScanner(m_conn_pool, _ns, _job, "handled"));
+	m_writer.reset(new htCollWriterConc(m_conn_pool, _ns, _job));
 }
 
 void hSpliterLocal::loadStates()
@@ -160,15 +167,16 @@ void hSpliterLocal::makeRanges()
 	m_nkeys = 0;
 	std::string key;
 	
-	m_input_scanner->reset();
+	//m_input_scanner->reset();
 	while (!m_input_scanner->end()) {
 		key = m_input_scanner->getNextKey();
+		//std::cout << "key: " << key << std::endl;
 		//m_keys_handled.insert(std::pair<std::string,bool>(key, false));
 		m_nkeys++;
 		
 		if (m_nkeys % 1000 == 0)
-			std::cout << "key: " << key << " n: " << m_nkeys << std::endl;
-		continue;
+			//std::cout << "key: " << key << " n: " << m_nkeys << std::endl;
+			continue;
 		
 		if (!isHandled(key)) {
 			if (!beg_set) {
@@ -203,6 +211,7 @@ void hSpliterLocal::makeRanges()
 		//std::cout << "range: " << beg_key << " " << key << std::endl;
 		m_free_ranges.push(KeyRange(beg_key, key));
 	}
+	std::cout << "made " << m_free_ranges.size() << " ranges\n";
 	std::cout << "makeRanges finished\n";
 }
 
