@@ -19,6 +19,9 @@
 
 class hSpliterLocal : public hSpliterClient
 {
+	std::string m_sns;
+	std::string m_input_table;
+	
 	htConnPoolPtr m_conn_pool;
 	Hypertable::ThriftGen::Namespace m_ns;
 	
@@ -33,7 +36,7 @@ class hSpliterLocal : public hSpliterClient
 	// key / timestamp
 	std::tr1::unordered_map<std::string, uint64_t> m_keys_commiting;
 	
-	std::queue<KeyRange> m_free_ranges;
+	std::vector<KeyRange> m_free_ranges;
 	
 	uint64_t m_nkeys;
 //	uint64_t m_nreassigned;

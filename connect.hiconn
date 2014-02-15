@@ -1,0 +1,11 @@
+{
+
+"_NAME" : "hspliter",
+
+"_CPPFILES" : [ { "type": "Glob", "mask": "*.cpp" } ],
+
+"_DEPS": ["../hiaux/threads/",
+		"../hiaux/strings/",
+		"../htdba/"]
+
+}

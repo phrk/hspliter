@@ -57,8 +57,11 @@ hSpliterLocal::hSpliterLocal(htConnPoolPtr conn_pool,
 				std::string _input_table,
 				std::string _job,
 				hSpliterClient::Mode mode,
-				size_t key_step)
+				size_t key_step):
+			m_sns(_ns),
+			m_input_table(_input_table)
 {
+	srand (time(NULL));
 	m_conn_pool.reset(new htConnPool(*conn_pool));
 	m_job = _job;
 	m_key_step = key_step;
@@ -189,7 +192,7 @@ void hSpliterLocal::makeRanges()
 				nkeys_in_step++;
 				if (nkeys_in_step >= m_key_step) {
 					//std::cout << "range: " << beg_key << " " << end_key << std::endl;
-					m_free_ranges.push(KeyRange(beg_key, end_key));
+					m_free_ranges.push_back(KeyRange(beg_key, end_key));
 					beg_set = 0;
 					nkeys_in_step = 0;
 				}
@@ -198,7 +201,7 @@ void hSpliterLocal::makeRanges()
 		else {
 			m_nhandled++;
 			if (beg_set) {
-				m_free_ranges.push(KeyRange(beg_key, end_key));
+				m_free_ranges.push_back(KeyRange(beg_key, end_key));
 				beg_set = 0;
 			}
 		}
@@ -209,7 +212,7 @@ void hSpliterLocal::makeRanges()
 	}
 	if (beg_set) {
 		//std::cout << "range: " << beg_key << " " << key << std::endl;
-		m_free_ranges.push(KeyRange(beg_key, key));
+		m_free_ranges.push_back(KeyRange(beg_key, key));
 	}
 	std::cout << "made " << m_free_ranges.size() << " ranges\n";
 	std::cout << "makeRanges finished\n";
@@ -218,14 +221,19 @@ void hSpliterLocal::makeRanges()
 KeyRange hSpliterLocal::getSplit()
 {
 	hLockTicketPtr lock_ticket = m_lock->lock();
-	if (m_free_ranges.empty()) {
+	if (m_free_ranges.size()==0) {
 		std::cout << "________hSpliterLocal::getSplit MakeRanges()\n"; 
+		createDbAccessors(m_sns, m_job, m_input_table);
 		makeRanges();
 	}
 	
-	if (!m_free_ranges.empty()) {
-		KeyRange range = m_free_ranges.front();
-		m_free_ranges.pop();	
+	if (m_free_ranges.size() != 0) {
+		size_t range_i = rand() % m_free_ranges.size();
+		std::vector<KeyRange>::iterator it = m_free_ranges.begin();
+		it += range_i;
+		std::cout << "_________range_i: " << range_i << std::endl;
+		KeyRange range = *it;
+		m_free_ranges.erase(it);
 		return range;
 		
 	} else
