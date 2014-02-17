@@ -8,7 +8,7 @@
 #ifndef HSPLITERLOCAL_H
 #define	HSPLITERLOCAL_H
 
-#include <tr1/unordered_map>
+#include <unordered_map>
 
 #include "hSpliterClient.h"
 #include "../htdba/htCollScanner.h"
@@ -32,9 +32,9 @@ class hSpliterLocal : public hSpliterClient
 	htCollScannerPtr m_states_scanner;
 	htCollWriterConcPtr m_writer;
 	
-	std::tr1::unordered_map<std::string, bool> m_keys_handled;
+	std::unordered_map<std::string, bool> m_keys_handled;
 	// key / timestamp
-	std::tr1::unordered_map<std::string, uint64_t> m_keys_commiting;
+	std::unordered_map<std::string, uint64_t> m_keys_commiting;
 	
 	std::vector<KeyRange> m_free_ranges;
 	
