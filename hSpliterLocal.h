@@ -8,7 +8,8 @@
 #ifndef HSPLITERLOCAL_H
 #define	HSPLITERLOCAL_H
 
-#include <unordered_map>
+#include "hiconfig.h"
+#include "hiaux/structs/hashtable.h"
 
 #include "hSpliterClient.h"
 #include "../htdba/htCollScanner.h"
@@ -32,9 +33,9 @@ class hSpliterLocal : public hSpliterClient
 	htCollScannerPtr m_states_scanner;
 	htCollWriterConcPtr m_writer;
 	
-	std::unordered_map<std::string, bool> m_keys_handled;
+	hiaux::hashtable<std::string, bool> m_keys_handled;
 	// key / timestamp
-	std::unordered_map<std::string, uint64_t> m_keys_commiting;
+	hiaux::hashtable<std::string, uint64_t> m_keys_commiting;
 	
 	std::vector<KeyRange> m_free_ranges;
 	

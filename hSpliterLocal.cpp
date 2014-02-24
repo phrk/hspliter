@@ -1,3 +1,4 @@
+#include "hiconfig.h"
 #include <set>
 
 #include "hSpliterLocal.h"
@@ -138,7 +139,7 @@ bool hSpliterLocal::isOwned(std::string key)
 
 bool hSpliterLocal::isCommiting(std::string key)
 {
-	std::unordered_map<std::string, uint64_t>::iterator it = 
+	hiaux::hashtable<std::string, uint64_t>::iterator it = 
 			m_keys_commiting.find(key);
 	if (it == m_keys_commiting.end()) {
 		return false;
@@ -150,7 +151,7 @@ bool hSpliterLocal::isCommiting(std::string key)
 
 bool hSpliterLocal::isHandled(const std::string &key)
 {
-	std::unordered_map<std::string, bool>::iterator it = \
+	hiaux::hashtable<std::string, bool>::iterator it = \
 		m_keys_handled.find(key);
 	
 	if (it != m_keys_handled.end()) {
@@ -290,7 +291,7 @@ bool hSpliterLocal::tryKeyCommit(std::string key)
 {
 	hLockTicketPtr lock_ticket = m_lock->lock();
 	// trylock key
-	std::unordered_map<std::string, uint64_t>::iterator it = 
+	hiaux::hashtable<std::string, uint64_t>::iterator it = 
 			m_keys_commiting.find(key);
 	if (it != m_keys_commiting.end()) {
 		return false;
@@ -304,7 +305,7 @@ bool hSpliterLocal::tryKeyCommit(std::string key)
 void hSpliterLocal::setKeyCommited(std::string key)
 {
 	hLockTicketPtr lock_ticket = m_lock->lock();
-	std::unordered_map<std::string, bool>::iterator it = \
+	hiaux::hashtable<std::string, bool>::iterator it = \
 		m_keys_handled.find(key);
 	
 	if (it != m_keys_handled.end()) {
